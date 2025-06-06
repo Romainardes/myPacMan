@@ -95,10 +95,10 @@ class Pacman {
         this.position.y += this.velocity.y;
 
         // Atualizar a rotação com base em velocity (que é a direção)
-        if (this.velocity.x > 0) this.rotation = 0; // Right
-        else if (this.velocity.x < 0) this.rotation = Math.PI; // Left
-        else if (this.velocity.y > 0) this.rotation = Math.PI / 2; // Up
-        else if (this.velocity.y < 0) this.rotation = Math.PI * 1.5; // Down
+        if (this.velocity.x > 0) this.rotation = 0; // Direita
+        else if (this.velocity.x < 0) this.rotation = Math.PI; // Esquerda
+        else if (this.velocity.y > 0) this.rotation = Math.PI / 2; // Cima
+        else if (this.velocity.y < 0) this.rotation = Math.PI * 1.5; // Baixo
 
         // Animação de abertura e fechamento da boca    
         if (this.radians < 0 || this.radians > 0.75) {
