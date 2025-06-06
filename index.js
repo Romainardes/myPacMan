@@ -17,7 +17,7 @@ function startGame() {
 }
 
 function gameOver() {
-    // Play the Pac-Man death sound
+    // Som ao perder
     let deathSound = new Audio("sound/pacman_death.wav");
     deathSound.play();
 
@@ -25,20 +25,20 @@ function gameOver() {
         gameOverDiv.style.display = "block";
         canvas.style.display = "none";
         finalScore.innerHTML = score;
-    }, 1000); // Delay of 1 second
+    }, 1000); // Atraso de um segundo para mudar a exibição da tela
 
 }
 
 
 function restartGame() {
-    sessionStorage.setItem("restart", "true"); // Set flag before reloading
-    location.reload(); // Reload the page
+    sessionStorage.setItem("restart", "true"); // Inclui a exibição de reiniciar
+    location.reload(); // Recarregar a página
 }
 
 window.onload = function () {
     if (sessionStorage.getItem("restart") === "true") {
-        sessionStorage.removeItem("restart"); // Clear the flag
-        startGame(); // Start the game immediately after reload
+        sessionStorage.removeItem("restart"); // Limpar a exibição de reiniciar
+        startGame(); // Inicia imediatamente após recarregar
     }
 };
 
@@ -67,23 +67,44 @@ class Pacman {
         this.velocity = velocity;
         this.radius = 12;
         this.radians = 0.75;
-        this.openRate = .03;
+        this.openRate = 0.03;
+        this.rotation = 0; // 0 = direita, Math.PI/2 = baixo, Math.PI = esquerda, 3*Math.PI/2 = cima
     }
 
     draw() {
+        c.save(); // Salva o estado atual da tela
+        c.translate(this.position.x, this.position.y); // Move a origem para a posição atual do Pacman
+        c.rotate(this.rotation); // Gira o personagem com base na direção
+
+        // Desenha o Pacman centrado na nova origem (0,0 após executar translate)
         c.beginPath();
-        c.arc(this.position.x, this.position.y,
-            this.radius, this.radians, Math.PI * 2 - this.radians);
-        c.lineTo(this.position.x, this.position.y);
+        c.arc(0, 0, this.radius, this.radians, Math.PI * 2 - this.radians);
+        c.lineTo(0, 0);
         c.fillStyle = 'yellow';
         c.fill();
         c.closePath();
+
+        c.restore(); // Restaura o estado da tela
     }
 
     update() {
         this.draw();
+
+        // Atualizar a posição
         this.position.x += this.velocity.x;
         this.position.y += this.velocity.y;
+
+        // Atualizar a rotação com base em velocity (que é a direção)
+        if (this.velocity.x > 0) this.rotation = 0; // Right
+        else if (this.velocity.x < 0) this.rotation = Math.PI; // Left
+        else if (this.velocity.y > 0) this.rotation = Math.PI / 2; // Up
+        else if (this.velocity.y < 0) this.rotation = Math.PI * 1.5; // Down
+
+        // Animação de abertura e fechamento da boca    
+        if (this.radians < 0 || this.radians > 0.75) {
+            this.openRate = -this.openRate;
+        }
+        this.radians += this.openRate;
     }
 }
 
@@ -91,7 +112,6 @@ class Ghost {
     static speed = 0.3
     constructor({ position, velocity, color = 'red', image, maze }) {
         this.position = position;
-        // ← ignore the “velocity” parameter entirely; we’ll compute our own:
         this.velocity = { x: 0, y: 0 };
         this.radius = 13;
         this.color = color;
@@ -103,22 +123,22 @@ class Ghost {
         this.mode = 'scatter';
         this.directionChanges = 0;
 
-        // Scatter corner:
+        // Canto para os fantasmas se espalharem
         this.scatterCorner = this.getScatterCorner();
 
-        // Mode timing:
+        // Temporização para mudança de modo:
         this.modeTimer = 0;
         this.modeDuration = {
             scatter: 7000,
             chase: 20000
         };
 
-        // ← **NEW LINE**: Right after all that, force an AI decision:
+        // Forçar decisão da direção
         this.changeDirection();
     }
 
     getScatterCorner() {
-        // Define specific corners for each ghost color
+        // Definir cantos específicos para cada fantasma
         const corners = {
             'green': { x: Boundary.width * 9.5, y: Boundary.height * 1.5 },
             'pink': { x: Boundary.width * 1.5, y: Boundary.height * 1.5 },
@@ -139,7 +159,7 @@ class Ghost {
             this.velocity
         );
 
-        // If no valid directions, reverse (dead end)
+        // Se não houver direção válida (beco sem saída), inverter a direção
         if (validDirections.length === 0) {
             this.velocity = {
                 x: -this.velocity.x,
@@ -148,13 +168,13 @@ class Ghost {
             return;
         }
 
-        // Tratamento especial para bordas
+        // Constantes para verificar se o personagem está na borda
         const atLeftBorder = this.position.x <= this.radius;
         const atRightBorder = this.position.x >= (this.maze.map[0].length * this.maze.cellSize) - this.radius;
         const atTopBorder = this.position.y <= this.radius;
         const atBottomBorder = this.position.y >= (this.maze.map.length * this.maze.cellSize) - this.radius;
 
-        // Se estiver em uma borda, obtenha direções válidas sem considerar a velocidade atual
+        // Se estiver em uma borda, obtenha direções válidas s/ considerar a velocidade atual
         if (atLeftBorder || atRightBorder || atTopBorder || atBottomBorder) {
             validDirections = this.maze.getValidDirections(
                 this.position.x,
@@ -164,7 +184,7 @@ class Ghost {
         }
 
 
-        // Se não houver direções válidas, inverta a direção
+        // Se ñ houver direções válidas, inverta a direção
         if (validDirections.length === 0) {
             this.velocity = {
                 x: -this.velocity.x,
@@ -210,7 +230,7 @@ class Ghost {
 
     // Método auxiliar para verificar se o fantasma está na borda do canvas
     isAtBorder() {
-        const buffer = 5; // Pixel buffer
+        const buffer = 5; // Buffer de pixels para evitar que o personagem fique preso
         return (
             this.position.x <= buffer ||
             this.position.x >= (this.maze.map[0].length * this.maze.cellSize) - buffer ||
@@ -258,7 +278,7 @@ class Ghost {
             this.changeDirection();
         }
 
-        // Border enforcement
+        // Forçar respeito às bordas
         const maxX = (this.maze.map[0].length - 1) * this.maze.cellSize;
         const maxY = (this.maze.map.length - 1) * this.maze.cellSize;
         const buffer = 2;
@@ -282,21 +302,21 @@ class Ghost {
 
 
     handleWallCollision(nextX, nextY) {
-        // Try moving only horizontally
+        // Tentar movimentar-se apenas na horizontal
         if (!this.maze.isWall(nextX, this.position.y, this.radius)) {
             this.position.x = nextX;
             this.velocity.y = 0;
             return;
         }
 
-        // Try moving only vertically
+        // Tentar movimentar-se apenas na vertical
         if (!this.maze.isWall(this.position.x, nextY, this.radius)) {
             this.position.y = nextY;
             this.velocity.x = 0;
             return;
         }
 
-        // If both directions are blocked, snap to center of current cell
+        // Se ambas as direções estiverem bloqueadas, ir para o centro da célula atual
         const cellX = Math.round(this.position.x / this.maze.cellSize);
         const cellY = Math.round(this.position.y / this.maze.cellSize);
         this.position.x = cellX * this.maze.cellSize + this.maze.cellSize / 2;
@@ -307,15 +327,15 @@ class Ghost {
 
 
     setTarget(targetPosition) {
-        // In scatter mode, use the ghost's scatter corner
+        // Quando no modo scatter (espalhar), usar o canto definido para o fantasma
         if (this.mode === 'scatter') {
             this.target = this.scatterCorner;
             return;
         }
 
-        // In chase mode, validate the target carefully
+        // No modo perseguição (chase), validar o destino com verificações 
         if (this.mode === 'chase') {
-            // Check if target is valid
+            // Verificar se o destino é válido
             if (targetPosition &&
                 !isNaN(targetPosition.x) &&
                 !isNaN(targetPosition.y) &&
@@ -326,17 +346,15 @@ class Ghost {
 
                 this.target = targetPosition;
             } else {
-                // If target is invalid, use scatter corner
+                // Se o destino for inválido, usar o canto definido para o fantasma como plano B
                 this.target = this.scatterCorner;
             }
         }
     }
 
-
+    // Define o modo
     setMode(mode) {
         this.mode = mode;
-        // In frightened mode, ghosts move slower
-        this.speed = mode === 'frightened' ? 1 : Ghost.speed;
     }
 }
 
@@ -387,6 +405,7 @@ function createImage(src) {
     return image
 }
 
+//Popula o mapa com cada elemento, usando imagens e caracteres
 map.forEach((row, i) => {
     row.forEach((symbol, j) => {
         switch (symbol) {
@@ -551,33 +570,33 @@ class Maze {
     }
 
     isWall(x, y, radius = 0) {
-        // Convert pixel coordinates to grid coordinates
+        // Converter coordenadas em pixel para coordenadas de grade
         const gridX = Math.floor(x / this.cellSize);
         const gridY = Math.floor(y / this.cellSize);
 
-        // Check if position is out of bounds
+        // Verificar se a posição está fora dos limites
         if (gridY < 0 || gridY >= this.map.length ||
             gridX < 0 || gridX >= this.map[0].length) {
             return true;
         }
 
-        // Check if the cell is a wall
+        // Verificar se a célula é uma parede
         const isWallCell = this.wallSymbols.includes(this.map[gridY][gridX]);
 
-        // More precise edge checking
+        // Verificação de bordas reforçada
         if (!isWallCell) {
             const cellLeft = gridX * this.cellSize;
             const cellRight = (gridX + 1) * this.cellSize;
             const cellTop = gridY * this.cellSize;
             const cellBottom = (gridY + 1) * this.cellSize;
 
-            // Calculate penetration depth
+            // Calcular a profundidade da penetração
             const leftPenetration = (cellLeft - x) + radius;
             const rightPenetration = (x - cellRight) + radius;
             const topPenetration = (cellTop - y) + radius;
             const bottomPenetration = (y - cellBottom) + radius;
 
-            // Check adjacent cells if we're near an edge
+            // Verificar as células adjacentes caso esteja próximo à borda
             if (leftPenetration > 0 && gridX > 0 &&
                 this.wallSymbols.includes(this.map[gridY][gridX - 1])) {
                 return true;
@@ -607,23 +626,23 @@ class Maze {
             { x: -1, y: 0, name: 'left' }   // left
         ];
 
-        // Convert to grid coordinates
+        // Converter em coordenadas de grade
         const gridX = Math.floor(x / this.cellSize);
         const gridY = Math.floor(y / this.cellSize);
 
         return directions.filter(dir => {
-            // Don't allow 180-degree turns (except in dead ends)
+            // Não permitir viradas de 180 graus (exceto em becos sem saída)
             if (currentVelocity &&
                 dir.x === -currentVelocity.x &&
                 dir.y === -currentVelocity.y) {
                 return false;
             }
 
-            // Check if next cell is valid
+            // Verificar se a próxima célula é válida
             const nextX = gridX + dir.x;
             const nextY = gridY + dir.y;
 
-            // Check bounds
+            // Verificar bordas
             if (nextY < 0 || nextY >= this.map.length ||
                 nextX < 0 || nextX >= this.map[0].length) {
                 return false;
@@ -636,10 +655,9 @@ class Maze {
 
 const maze = new Maze(map, Boundary.width);
 
-// Create ghosts after maze is initialized
-// Update the ghost initialization code to:
+// Criar fantasmas após o labirinto estar renderizado
 const ghosts = [
-    // Green Ghost (Top-middle corridor)
+    // Fantasma verde (corredor superior central)
     new Ghost({
         position: {
             x: Boundary.width * 5 + Boundary.width / 2,
@@ -650,7 +668,7 @@ const ghosts = [
         color: 'green',
         maze: maze
     }),
-    // Pink Ghost (Middle-left corridor)
+    // Fantasma rosa (corredor superior esquerdo)
     new Ghost({
         position: {
             x: Boundary.width * 1 + Boundary.width / 2,
@@ -661,7 +679,7 @@ const ghosts = [
         color: 'pink',
         maze: maze
     }),
-    // White Ghost (Top-right corridor)
+    // Fantasma branco (corredor superior direito)
     new Ghost({
         position: {
             x: Boundary.width * 9 + Boundary.width / 2,
@@ -672,7 +690,7 @@ const ghosts = [
         color: 'white',
         maze: maze
     }),
-    // Blue Ghost (Bottom-right corridor)
+    // Fantasma azul (corredor inferior direito)
     new Ghost({
         position: {
             x: Boundary.width * 4 + Boundary.width / 2,
@@ -683,7 +701,7 @@ const ghosts = [
         color: 'blue',
         maze: maze
     }),
-    // Yellow Ghost (Bottom-left corridor)
+    // Fantasma amarelo (corredor inferior esquerdo)
     new Ghost({
         position: {
             x: Boundary.width * 2 + Boundary.width / 2,
@@ -694,7 +712,7 @@ const ghosts = [
         color: 'yellow',
         maze: maze
     }),
-    // Red Ghost (Far-left corridor)
+    // Fantasma vermelho (corredro extrema esquerda)
     new Ghost({
         position: {
             x: Boundary.width * 1 + Boundary.width / 2,
@@ -755,18 +773,18 @@ function animation() {
     animationId = requestAnimationFrame(animation);
     c.clearRect(0, 0, canvas.width, canvas.height);
 
-    // 1) Update ghost targets so they follow Pac-Man
+    // Atualizar ponto de destino para os fantasmas para que sigam o Pac-man
     ghosts.forEach(ghost => {
         ghost.setTarget(pacman.position);
     });
 
-    // 2) HANDLE PAC-MAN INPUT + COLLISION CHECKS (remove any manual position += here)
+    // Tecla de entrada para pacman + colisões com a parede 
     if (keys.ArrowUp) {
         // Attempt to move up
         pacman.velocity.x = 0;
         pacman.velocity.y = -3;
 
-        // Check if moving up would hit a wall
+        // Verificar se mover para cima bateria na parede
         let canMove = true;
         boundaries.forEach(boundary => {
             if (circleWithRect({
@@ -788,11 +806,11 @@ function animation() {
         }
     }
     else if (keys.ArrowLeft) {
-        // Attempt to move left
+        // Tentar ir para a esquerda
         pacman.velocity.x = -3;
         pacman.velocity.y = 0;
 
-        // Check if moving left would hit a wall
+        // Verificar se mover para a esquerda bateria na parede
         let canMove = true;
         boundaries.forEach(boundary => {
             if (circleWithRect({
@@ -814,11 +832,11 @@ function animation() {
         }
     }
     else if (keys.ArrowDown) {
-        // Attempt to move down
+        // Tentar ir para baixo
         pacman.velocity.x = 0;
         pacman.velocity.y = 3;
 
-        // Check if moving down would hit a wall
+        // Verificar se mover para baixo bateria na parede
         let canMove = true;
         boundaries.forEach(boundary => {
             if (circleWithRect({
@@ -840,11 +858,11 @@ function animation() {
         }
     }
     else if (keys.ArrowRight) {
-        // Attempt to move right
+        // Tentar ir para cima
         pacman.velocity.x = 3;
         pacman.velocity.y = 0;
 
-        // Check if moving right would hit a wall
+        // Verificar se mover para a direita bateria na parede
         let canMove = true;
         boundaries.forEach(boundary => {
             if (circleWithRect({
@@ -866,15 +884,15 @@ function animation() {
         }
     }
     else {
-        // No key pressed → stop Pac-Man completely
+        // Nenhuma tecla pressionada - deixar pacman parado
         pacman.velocity.x = 0;
         pacman.velocity.y = 0;
     }
 
-    // 3) UPDATE PAC-MAN (draw + move exactly once)
+    // Atualizar o pacman - desenhar e realizar um movimento apenas
     pacman.update();
 
-    // 4) CLAMP PAC-MAN INSIDE THE CANVAS BOUNDS
+    // Manter o pacman dentro dos limites da tela de jogo
     pacman.position.x = Math.max(
         pacman.radius,
         Math.min(pacman.position.x, canvas.width - pacman.radius)
@@ -884,7 +902,7 @@ function animation() {
         Math.min(pacman.position.y, canvas.height - pacman.radius)
     );
 
-    // 5) HANDLE PELLETS
+    // Gerenciar as bolinhas comestíveis, fazendo desaparecer ao comer e atualizando o score
     pellets.forEach((pellet, i) => {
         const dist = Math.hypot(
             pellet.position.x - pacman.position.x,
@@ -901,20 +919,14 @@ function animation() {
         }
     });
 
-    // 6) DRAW BOUNDARIES
+    // Desenhar os limites 
     boundaries.forEach(boundary => boundary.draw());
 
-    // 7) UPDATE GHOSTS
-    ghosts.forEach((ghost, index) => {  // Add index parameter here
-        console.log(`Ghost ${index}:`, {
-            position: ghost.position,
-            target: ghost.target,
-            velocity: ghost.velocity,
-            mode: ghost.mode
-        });
+    // Atualizar os fantasmas
+    ghosts.forEach((ghost, index) => {
         ghost.update();
 
-        // If a ghost touches Pac-Man, game over
+        // Se um fantasma encostar no pac-man, fim de jogo - fórmula euclideana
         const distToPac = Math.hypot(
             ghost.position.x - pacman.position.x,
             ghost.position.y - pacman.position.y
@@ -927,7 +939,7 @@ function animation() {
 
 
 
-    // 8) WIN CONDITION: refill pellets when all are eaten
+    // Condição de mudança de nível - reabastecer bolinhas quando todas forem comidas
     if (pellets.length === 0) {
         refillMapWithPellets();
     }
@@ -948,7 +960,7 @@ function refillMapWithPellets() {
             }
         });
     });
-    currentGhostSpeed += 0.2; // Increase ghost speed slightly each level
+    currentGhostSpeed += 0.3; // Aumentar velocidade dos fantasmas a cada mudança de nível
     updateGhostSpeed();
 }
 
@@ -960,14 +972,14 @@ function updateGhostSpeed() {
 
 window.addEventListener('keydown', (event) => {
     if (["ArrowUp", "ArrowLeft", "ArrowDown", "ArrowRight"].includes(event.key)) {
-        event.preventDefault(); // Stop default scrolling behavior
-        keys[event.key] = true; // Store pressed state directly using key name
+        event.preventDefault(); // evitar que a rolagem seja feita no navegador
+        keys[event.key] = true; // Armazenar o estado de pressionamento
     }
 });
 
 window.addEventListener('keyup', (event) => {
     if (["ArrowUp", "ArrowLeft", "ArrowDown", "ArrowRight"].includes(event.key)) {
-        keys[event.key] = false; // Reset key state when released
+        keys[event.key] = false; // Resetar o estado de pressionamento ao soltar
     }
 });
 

@@ -1,6 +1,6 @@
 body {
     margin: 0;
-    background-color: green;
+    background-color: whitesmoke;
     padding: 10px 20px;
 }
 
@@ -14,6 +14,7 @@ p {
 #game-over {
     font-family: Arial, Helvetica, sans-serif;
     color: purple;
+    background-color: whitesmoke;
     padding: 20px;
     position: fixed;
     top: 50%;
@@ -23,12 +24,14 @@ p {
     height: 200px;
     width: 250px;
     text-align: center;
+    border-radius: 15px;
 }
 
 #start a,
 #game-over a {
     border: 3px solid purple;
     color: purple;
+    background-color: whitesmoke;
     text-decoration: none;
     padding: 10px;
     border-radius: 15px;
@@ -43,5 +46,9 @@ p {
 #start a:hover,
 #game-over a:hover {
     background-color: purple;
-    color: #1bafdb;
+    color: whitesmoke;
+}
+
+#gameCanvas {
+    background-color: green;
 }
