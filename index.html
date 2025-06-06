@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PacMan</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+
+<body>
+    <p> <span>Score: </span><span id="scoreC">0</span></p>
+    <canvas id="gameCanvas"></canvas>
+    <div id="start" style="display: block;">
+        <a href="#" onclick="startGame()">Iniciar</a>
+    </div>
+    <div id="game-over" style="display: none;">
+        <h1>Game Over</h1>
+        <p>Sua Pontuação: <span id="finalScore">0</span></p>
+        <a href="#" onclick="restartGame()">Reiniciar</a>
+</body>
+
+</html>
+<script src="index.js"></script>
