@@ -17,15 +17,31 @@ function startGame() {
 }
 
 function gameOver() {
-    gameOverDiv.style.display = "block";
-    canvas.style.display = "none";
-    finalScore.innerHTML = score;
+    // Play the Pac-Man death sound
+    let deathSound = new Audio("sound/pacman_death.wav");
+    deathSound.play();
+
+    setTimeout(() => {
+        gameOverDiv.style.display = "block";
+        canvas.style.display = "none";
+        finalScore.innerHTML = score;
+    }, 1000); // Delay of 1 second
+
 }
 
+
 function restartGame() {
-    location.reload()
-    startGame();
+    sessionStorage.setItem("restart", "true"); // Set flag before reloading
+    location.reload(); // Reload the page
 }
+
+window.onload = function () {
+    if (sessionStorage.getItem("restart") === "true") {
+        sessionStorage.removeItem("restart"); // Clear the flag
+        startGame(); // Start the game immediately after reload
+    }
+};
+
 
 class Boundary {
     static width = 40
@@ -72,7 +88,7 @@ class Pacman {
 }
 
 class Ghost {
-    static speed = 2
+    static speed = 0.3
     constructor({ position, velocity, color = 'red', image, maze }) {
         this.position = position;
         // ← ignore the “velocity” parameter entirely; we’ll compute our own:
@@ -337,7 +353,7 @@ class Pellet {
         c.beginPath()
         c.arc(this.position.x, this.position.y,
             this.radius, 0, Math.PI * 2)
-        c.fillStyle = 'white'
+        c.fillStyle = 'purple'
         c.fill()
         c.closePath();
     }
@@ -704,11 +720,12 @@ const pacman = new Pacman({
 
 let lastKey = ''
 const keys = {
-    w: { pressed: false },
-    a: { pressed: false },
-    s: { pressed: false },
-    d: { pressed: false }
-}
+    ArrowUp: false,
+    ArrowLeft: false,
+    ArrowDown: false,
+    ArrowRight: false
+};
+
 
 function circleWithRect({ circle, rectangle }) {
     const circleX = circle.position.x + circle.velocity.x;
@@ -744,7 +761,7 @@ function animation() {
     });
 
     // 2) HANDLE PAC-MAN INPUT + COLLISION CHECKS (remove any manual position += here)
-    if (keys.w.pressed) {
+    if (keys.ArrowUp) {
         // Attempt to move up
         pacman.velocity.x = 0;
         pacman.velocity.y = -3;
@@ -770,7 +787,7 @@ function animation() {
             pacman.velocity.y = 0;
         }
     }
-    else if (keys.a.pressed) {
+    else if (keys.ArrowLeft) {
         // Attempt to move left
         pacman.velocity.x = -3;
         pacman.velocity.y = 0;
@@ -796,7 +813,7 @@ function animation() {
             pacman.velocity.x = 0;
         }
     }
-    else if (keys.s.pressed) {
+    else if (keys.ArrowDown) {
         // Attempt to move down
         pacman.velocity.x = 0;
         pacman.velocity.y = 3;
@@ -822,7 +839,7 @@ function animation() {
             pacman.velocity.y = 0;
         }
     }
-    else if (keys.d.pressed) {
+    else if (keys.ArrowRight) {
         // Attempt to move right
         pacman.velocity.x = 3;
         pacman.velocity.y = 0;
@@ -874,6 +891,8 @@ function animation() {
             pellet.position.y - pacman.position.y
         );
         if (dist < pellet.radius + pacman.radius) {
+            let eatPellet = new Audio("sound/pacman_chomp.wav");
+            eatPellet.play();
             pellets.splice(i, 1);
             score += 10;
             scoreC.innerHTML = score;
@@ -929,7 +948,7 @@ function refillMapWithPellets() {
             }
         });
     });
-    currentGhostSpeed += 0.5; // Increase ghost speed slightly each level
+    currentGhostSpeed += 0.2; // Increase ghost speed slightly each level
     updateGhostSpeed();
 }
 
@@ -939,36 +958,16 @@ function updateGhostSpeed() {
     });
 }
 
-window.addEventListener('keydown', ({ key }) => {
-    switch (key) {
-        case 'w':
-            keys.w.pressed = true
-            break
-        case 'a':
-            keys.a.pressed = true
-            break
-        case 's':
-            keys.s.pressed = true
-            break
-        case 'd':
-            keys.d.pressed = true
-            break
+window.addEventListener('keydown', (event) => {
+    if (["ArrowUp", "ArrowLeft", "ArrowDown", "ArrowRight"].includes(event.key)) {
+        event.preventDefault(); // Stop default scrolling behavior
+        keys[event.key] = true; // Store pressed state directly using key name
     }
 });
 
-window.addEventListener('keyup', ({ key }) => {
-    switch (key) {
-        case 'w':
-            keys.w.pressed = false
-            break
-        case 'a':
-            keys.a.pressed = false
-            break
-        case 's':
-            keys.s.pressed = false
-            break
-        case 'd':
-            keys.d.pressed = false
-            break
+window.addEventListener('keyup', (event) => {
+    if (["ArrowUp", "ArrowLeft", "ArrowDown", "ArrowRight"].includes(event.key)) {
+        keys[event.key] = false; // Reset key state when released
     }
 });
+
