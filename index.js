@@ -197,13 +197,9 @@ class Ghost {
         let chosenDirection;
         if (this.mode === 'scatter') {
             chosenDirection = this.chooseDirectionToTarget(validDirections, this.scatterCorner);
-        } else if (this.mode === 'chase') {
-            chosenDirection = this.chooseDirectionToTarget(validDirections, this.target);
         } else {
-            // Para o modo assustado, escolha aleatoriamente
-            chosenDirection = validDirections[Math.floor(Math.random() * validDirections.length)];
+            chosenDirection = this.chooseDirectionToTarget(validDirections, this.target);
         }
-
         this.velocity = {
             x: chosenDirection.x * this.speed,
             y: chosenDirection.y * this.speed
