@@ -5,16 +5,31 @@ const startDiv = document.getElementById('start')
 const gameOverDiv = document.getElementById('game-over')
 let score = 0;
 
-canvas.width = innerWidth
-canvas.height = innerHeight
+canvas.width = 440;
+canvas.height = 520;
+
+
 
 function startGame() {
     score = 0;
     startDiv.style.display = "none";
     gameOverDiv.style.display = "none";
+
+    // Reset margins to avoid interference.
+    document.body.style.margin = "0";
+
+    // Place the canvas centrally using absolute positioning.
     canvas.style.display = "block";
+    canvas.style.position = "absolute";
+    canvas.style.top = "50%";
+    canvas.style.left = "50%";
+    canvas.style.transform = "translate(-50%, -50%)";
+
     animation();
 }
+
+
+
 
 function gameOver() {
     // Som ao perder
@@ -69,6 +84,7 @@ class Pacman {
         this.radians = 0.75;
         this.openRate = 0.03;
         this.rotation = 0; // 0 = direita, Math.PI/2 = baixo, Math.PI = esquerda, 3*Math.PI/2 = cima
+        this.nextDirection = null;
     }
 
     draw() {
@@ -88,24 +104,52 @@ class Pacman {
     }
 
     update() {
+        // Draw Pac-Man
         this.draw();
 
-        // Atualizar a posição
+        // If there’s a buffered turn command, check grid alignment.
+        if (this.nextDirection) {
+            // Convert Pac-Man’s current position (in pixels) to grid coordinates.
+            const gridX = Math.floor(this.position.x / maze.cellSize);
+            const gridY = Math.floor(this.position.y / maze.cellSize);
+
+            // Compute the center of the current cell.
+            const centerX = gridX * maze.cellSize + maze.cellSize / 2;
+            const centerY = gridY * maze.cellSize + maze.cellSize / 2;
+
+            // Define a threshold for snapping (adjust this value as needed).
+            const threshold = 4;
+            if (Math.abs(this.position.x - centerX) < threshold &&
+                Math.abs(this.position.y - centerY) < threshold) {
+
+                // Snap Pac-Man to the center of the cell.
+                this.position.x = centerX;
+                this.position.y = centerY;
+
+                // Update velocity with the buffered turn direction.
+                this.velocity = { x: this.nextDirection.x, y: this.nextDirection.y };
+                // Clear the buffered input.
+                this.nextDirection = null;
+            }
+        }
+
+        // Update Pac-Man's position based on his current velocity.
         this.position.x += this.velocity.x;
         this.position.y += this.velocity.y;
 
-        // Atualizar a rotação com base em velocity (que é a direção)
-        if (this.velocity.x > 0) this.rotation = 0; // Direita
-        else if (this.velocity.x < 0) this.rotation = Math.PI; // Esquerda
-        else if (this.velocity.y > 0) this.rotation = Math.PI / 2; // Cima
-        else if (this.velocity.y < 0) this.rotation = Math.PI * 1.5; // Baixo
+        // Update rotation information for drawing Pac-Man.
+        if (this.velocity.x > 0) this.rotation = 0; // Right
+        else if (this.velocity.x < 0) this.rotation = Math.PI; // Left
+        else if (this.velocity.y > 0) this.rotation = Math.PI / 2; // Down
+        else if (this.velocity.y < 0) this.rotation = Math.PI * 1.5; // Up
 
-        // Animação de abertura e fechamento da boca    
+        // Animate the opening and closing of Pac-Man's mouth.
         if (this.radians < 0 || this.radians > 0.75) {
             this.openRate = -this.openRate;
         }
         this.radians += this.openRate;
     }
+
 }
 
 class Ghost {
@@ -769,18 +813,28 @@ function animation() {
     animationId = requestAnimationFrame(animation);
     c.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Atualizar ponto de destino para os fantasmas para que sigam o Pac-man
+    // Update ghosts’ targets so that they follow Pac-Man.
     ghosts.forEach(ghost => {
         ghost.setTarget(pacman.position);
     });
 
-    // Tecla de entrada para pacman + colisões com a parede 
+    // We'll use the maze's cellSize to determine grid centers.
+    const cellSize = maze.cellSize;
+    const threshold = 2; // How far off-center we allow before snapping
+
+    // Process input and align Pac-Man to the grid before setting velocity.
     if (keys.ArrowUp) {
-        // Attempt to move up
+        // For vertical movement, ensure Pac-Man’s x is aligned
+        const gridX = Math.floor(pacman.position.x / cellSize);
+        const centerX = gridX * cellSize + cellSize / 2;
+        if (Math.abs(pacman.position.x - centerX) > threshold) {
+            // Gradually nudge Pac-Man's x toward the cell center.
+            pacman.position.x += (centerX - pacman.position.x) * 0.2;
+        }
         pacman.velocity.x = 0;
         pacman.velocity.y = -3;
 
-        // Verificar se mover para cima bateria na parede
+        // Check for collisions in the upward direction.
         let canMove = true;
         boundaries.forEach(boundary => {
             if (circleWithRect({
@@ -802,11 +856,16 @@ function animation() {
         }
     }
     else if (keys.ArrowLeft) {
-        // Tentar ir para a esquerda
+        // For horizontal movement, ensure Pac-Man’s y is aligned.
+        const gridY = Math.floor(pacman.position.y / cellSize);
+        const centerY = gridY * cellSize + cellSize / 2;
+        if (Math.abs(pacman.position.y - centerY) > threshold) {
+            pacman.position.y += (centerY - pacman.position.y) * 0.2;
+        }
         pacman.velocity.x = -3;
         pacman.velocity.y = 0;
 
-        // Verificar se mover para a esquerda bateria na parede
+        // Collision check for moving left.
         let canMove = true;
         boundaries.forEach(boundary => {
             if (circleWithRect({
@@ -828,11 +887,16 @@ function animation() {
         }
     }
     else if (keys.ArrowDown) {
-        // Tentar ir para baixo
+        // For vertical movement, align Pac-Man’s x to the center.
+        const gridX = Math.floor(pacman.position.x / cellSize);
+        const centerX = gridX * cellSize + cellSize / 2;
+        if (Math.abs(pacman.position.x - centerX) > threshold) {
+            pacman.position.x += (centerX - pacman.position.x) * 0.2;
+        }
         pacman.velocity.x = 0;
         pacman.velocity.y = 3;
 
-        // Verificar se mover para baixo bateria na parede
+        // Collision check for downward movement.
         let canMove = true;
         boundaries.forEach(boundary => {
             if (circleWithRect({
@@ -854,11 +918,16 @@ function animation() {
         }
     }
     else if (keys.ArrowRight) {
-        // Tentar ir para cima
+        // For horizontal movement, align Pac-Man’s y to the center.
+        const gridY = Math.floor(pacman.position.y / cellSize);
+        const centerY = gridY * cellSize + cellSize / 2;
+        if (Math.abs(pacman.position.y - centerY) > threshold) {
+            pacman.position.y += (centerY - pacman.position.y) * 0.2;
+        }
         pacman.velocity.x = 3;
         pacman.velocity.y = 0;
 
-        // Verificar se mover para a direita bateria na parede
+        // Collision check for moving right.
         let canMove = true;
         boundaries.forEach(boundary => {
             if (circleWithRect({
@@ -880,12 +949,11 @@ function animation() {
         }
     }
     else {
-        // Nenhuma tecla pressionada - deixar pacman parado
+        // If no arrow key is pressed, leave Pac-Man stationary.
         pacman.velocity.x = 0;
         pacman.velocity.y = 0;
     }
 
-    // Atualizar o pacman - desenhar e realizar um movimento apenas
     pacman.update();
 
     // Manter o pacman dentro dos limites da tela de jogo
@@ -956,7 +1024,7 @@ function refillMapWithPellets() {
             }
         });
     });
-    currentGhostSpeed += 0.3; // Aumentar velocidade dos fantasmas a cada mudança de nível
+    currentGhostSpeed += 0.8; // Aumentar velocidade dos fantasmas a cada mudança de nível
     updateGhostSpeed();
 }
 

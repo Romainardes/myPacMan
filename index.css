@@ -51,4 +51,14 @@ p {
 
 #gameCanvas {
     background-color: green;
+    display: none;
+}
+
+#start {
+    display: block;
+}
+
+#scoreC {
+    display: flex;
+    justify-content: center;
 }
